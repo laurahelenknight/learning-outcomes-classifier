@@ -1,1 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Outcomes Classifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .outcome-result {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            background: #f9f9f9;
+        }
+        .outcome-result.AWARENESS {
+            border-left-color: #2196F3;
+        }
+        .outcome-result.IDEATION {
+            border-left-color: #FF9800;
+        }
+        .outcome-result.SHIFT {
+            border-left-color: #9C27B0;
+        }
+        .edge-case {
+            background: #fff3cd;
+            border-left-color: #ffc107 !important;
+        }
+        .classification {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .confidence {
+            color: #666;
+            font-size: 14px;
+        }
+        .rationale {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+        .edge-warning {
+            color: #856404;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .summary {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        #csvData {
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Learning Outcomes Classifier</h1>
+        <p style="text-align: center; color: #666;">
+            Systematic classification using empirically-derived language patterns from manual analysis of 90+ learning outcomes
+        </p>
+        
+        <div class="input-section">
+            <h3>Pattern Information:</h3>
+            <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
+                <strong>AWARENESS patterns:</strong> investigate, demonstrate awareness, articulate an understanding, reflect on...in relation to<br>
+                <strong>IDEATION patterns:</strong> apply, develop, create, undertake...to inform...development, integrate principles...in projects<br>
+                <strong>SHIFT patterns:</strong> exercise significant judgment, create one's own vision for the future, evaluate multiple futures
+            </div>
+            
+            <h3>Input Options:</h3>
+            
+            <div>
+                <label>
+                    <input type="radio" name="inputType" value="single" checked> 
+                    Single Outcome Analysis
+                </label>
+            </div>
+            <div>
+                <label>
+                    <input type="radio" name="inputType" value="batch"> 
+                    Batch Analysis (CSV Format)
+                </label>
+            </div>
+            
+            <div id="singleInput">
+                <h4>Enter Learning Outcome:</h4>
+                <textarea id="outcomeText" placeholder="Enter a learning outcome to classify..."></textarea>
+                <button onclick="analyzeSingle()">Analyze Outcome</button>
+            </div>
+            
+            <div id="batchInput" class="hidden">
+                <h4>CSV Data (Format: id,outcome_text):</h4>
+                <textarea id="csvData" placeholder="EC1,Articulate an understanding of relevant contexts and position your work
+EC2,Undertake critical analysis to inform design development 
+EC3,Exercise significant judgement in empathetic creative practice"></textarea>
+                <div class="file-input">
+                    <input type="file" id="csvFile" accept=".csv" onchange="loadCSV()">
+                    <button onclick="analyzeBatch()">Analyze All Outcomes</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="results" class="results"></div>
+    </div>
 
+    <script>
+        // Updated analyzeOutcome function with empirically-derived patterns
+        function analyzeOutcome(outcomeText, outcomeId = null) {
+            const transformationPatterns = {
+                SHIFT: {
+                    // Specific phrases (highest priority)
+                    phrases: [
+                        'exercise significant judgment',
+                        'exercise significant judgement',
+                        'to create one\'s own vision for the future',
+                        'create one\'s own vision for the future',
+                        'to locate yourself',
+                        'locate yourself',
+                        'evaluate multiple futures',
+                        'assess the consequence of actions',
+                        'evaluating the potential impact of your practice',
+                        'take a position.*in the discourse',
+                        'evidence originality in the application of subject knowledge',
+                        'test new hypotheses or speculations about the role'
+                    ],
+                    // Single words (lower priority)
+                    words: ['innovation', 'acute awareness'],
+                    priority: 3
+                },
+                IDEATION: {
+                    // Specific phrases (highest priority)
+                    phrases: [
+                        'integrate principles.*in projects',
+                        'apply approaches and strategies.*in response to',
+                        'define a strategy and concept',
+                        'develop and resolve.*project.*that responds',
+                        'devise a proposal.*informed by',
+                        'undertake analysis.*to support the development',
+                        'develop.*whilst consideration',
+                        'test.*to explore and inform.*whilst considering',
+                        'produce.*that explore.*whilst acknowledging',
+                        'explore.*and consider',
+                        'make.*through curiosity.*to discover creative solution',
+                        'respond.*through.*analysis',
+                        'apply.*to inform.*in relation to',
+                        'apply to develop and produce',
+                        'demonstrate an exploratary approach and solution minded attitude',
+                        'develop proposals.*that integrate',
+                        'create design projects.*respond to',
+                        'apply.*practices in the production of',
+                        'produce.*informed by',
+                        'integrate knowledge into',
+                        'synthesise research into',
+                        'synthesize research into',
+                        'execute proposals which show',
+                        'undertake.*to inform.*development',
+                        'demonstrating integrated problem solving.*to develop',
+                        'high level skills of self direction',
+                        'demonstrate resolution in negotiating',
+                        'identify and develop.*that articulates'
+                    ],
+                    // Single words (lower priority)
+                    words: [
+                        'apply', 'assess', 'communicate', 'conceive', 'create', 'define', 
+                        'develop', 'devise', 'evaluate', 'evidence', 'execute', 'experiment',
+                        'implement', 'integrate', 'manage', 'negotiate', 'produce', 'resolve',
+                        'respond', 'self-direct', 'synthesis', 'synthesize', 'translate', 'test', 'undertake'
+                    ],
+                    priority: 2
+                },
+                AWARENESS: {
+                    // Specific phrases (highest priority)
+                    phrases: [
+                        'investigate.*to inform',
+                        'investigate the emergence',
+                        'explore the issues',
+                        'demonstrating an understanding',
+                        'with consideration',
+                        'should be considered',
+                        'articulate an understanding',
+                        'reflect on.*in relation to',
+                        'demonstrate awareness',
+                        'research and analyse.*conditions',
+                        'demonstrate awareness.*and critical understanding',
+                        'demonstrate knowledge',
+                        'demonstrate understanding',
+                        'employ enhance knowledge',
+                        'gather.*to inform',
+                        'demonstrate a critical understanding'
+                    ],
+                    // Single words (lower priority)
+                    words: [
+                        'investigate', 'inform', 'explore', 'identify', 'pursue', 
+                        'articulate', 'reflect', 'research', 'analyse', 'analyze', 
+                        'employ', 'gather', 'work collaboratively'
+                    ],
+                    priority: 1
+                }
+            };
+
+            const normalizedText = outcomeText.toLowerCase();
+            const detectedPatterns = { SHIFT: [], IDEATION: [], AWARENESS: [] };
+            
+            // Pattern detection - prioritize phrases over single words
+            for (const [level, data] of Object.entries(transformationPatterns)) {
+                // First, detect specific phrases (higher confidence)
+                if (data.phrases) {
+                    for (const phrase of data.phrases) {
+                        const regex = new RegExp(phrase.replace(/\.\*/g, '.*'), 'i');
+                        if (regex.test(normalizedText)) {
+                            detectedPatterns[level].push(`[PHRASE] ${phrase}`);
+                        }
+                    }
+                }
+                
+                // Then, detect single words (lower confidence, only if no phrases found)
+                if (data.words) {
+                    for (const word of data.words) {
+                        // Use word boundaries to avoid partial matches
+                        const regex = new RegExp(`\\b${word}\\b`, 'i');
+                        if (regex.test(normalizedText)) {
+                            detectedPatterns[level].push(`[WORD] ${word}`);
+                        }
+                    }
+                }
+            }
+            
+            // Handle overlapping words - prioritize by transformation level
+            // Remove lower-priority word matches if higher-priority matches exist
+            const hasShiftPhrases = detectedPatterns.SHIFT.some(p => p.includes('[PHRASE]'));
+            const hasIdeationPhrases = detectedPatterns.IDEATION.some(p => p.includes('[PHRASE]'));
+            
+            // If SHIFT has phrase matches, remove conflicting word matches from lower levels
+            if (hasShiftPhrases) {
+                detectedPatterns.IDEATION = detectedPatterns.IDEATION.filter(p => p.includes('[PHRASE]'));
+                detectedPatterns.AWARENESS = detectedPatterns.AWARENESS.filter(p => p.includes('[PHRASE]'));
+            }
+            // If IDEATION has phrase matches, remove conflicting word matches from AWARENESS
+            else if (hasIdeationPhrases) {
+                detectedPatterns.AWARENESS = detectedPatterns.AWARENESS.filter(p => p.includes('[PHRASE]'));
+            }
+            
+            // Hierarchical classification
+            let classification = 'AWARENESS';
+            if (detectedPatterns.SHIFT.length > 0) {
+                classification = 'SHIFT';
+            } else if (detectedPatterns.IDEATION.length > 0) {
+                classification = 'IDEATION';
+            }
+            
+            // Confidence calculation - weight phrases higher than words
+            const classifiedPhrases = detectedPatterns[classification].filter(p => p.includes('[PHRASE]')).length;
+            const classifiedWords = detectedPatterns[classification].filter(p => p.includes('[WORD]')).length;
+            const totalPhrases = Object.values(detectedPatterns).flat().filter(p => p.includes('[PHRASE]')).length;
+            const totalWords = Object.values(detectedPatterns).flat().filter(p => p.includes('[WORD]')).length;
+            
+            let confidence = 0;
+            if (totalPhrases > 0 || totalWords > 0) {
+                // Weight phrases 3x more than words
+                const classifiedWeight = (classifiedPhrases * 3) + classifiedWords;
+                const totalWeight = (totalPhrases * 3) + totalWords;
+                confidence = classifiedWeight / totalWeight;
+                
+                // Bonus for phrase matches (more reliable)
+                if (classifiedPhrases > 0) {
+                    confidence = Math.min(1.0, confidence * 1.2);
+                }
+                
+                // Penalty for mixed signals
+                const levelsWithMatches = Object.values(detectedPatterns).filter(arr => arr.length > 0).length;
+                if (levelsWithMatches > 1) {
+                    confidence *= 0.8;
+                }
+            }
+            
+            // Edge case detection
+            const edgeCaseReasons = [];
+            const levelsWithPatterns = Object.entries(detectedPatterns)
+                .filter(([level, patterns]) => patterns.length > 0)
+                .map(([level, patterns]) => level);
+            
+            if (levelsWithPatterns.length >= 2) {
+                edgeCaseReasons.push(`Mixed signals: patterns from ${levelsWithPatterns.join(', ')}`);
+            }
+            if (confidence < 0.4) {
+                edgeCaseReasons.push(`Low confidence score: ${confidence.toFixed(3)}`);
+            }
+            
+            // Rationale generation
+            let rationale = '';
+            if (detectedPatterns[classification].length > 0) {
+                // Clean up pattern display for rationale
+                const cleanPatterns = detectedPatterns[classification]
+                    .slice(0, 3)
+                    .map(p => p.replace('[PHRASE] ', '').replace('[WORD] ', ''))
+                    .join(', ');
+                
+                const phraseCount = detectedPatterns[classification].filter(p => p.includes('[PHRASE]')).length;
+                const wordCount = detectedPatterns[classification].filter(p => p.includes('[WORD]')).length;
+                
+                let patternType = '';
+                if (phraseCount > 0 && wordCount > 0) {
+                    patternType = `${phraseCount} phrase(s) and ${wordCount} word(s)`;
+                } else if (phraseCount > 0) {
+                    patternType = `${phraseCount} phrase pattern(s)`;
+                } else {
+                    patternType = `${wordCount} word pattern(s)`;
+                }
+                
+                rationale = `Classified as ${classification} based on ${patternType}: ${cleanPatterns}`;
+                
+                const otherLevels = levelsWithPatterns.filter(level => level !== classification);
+                if (otherLevels.length > 0) {
+                    rationale += `. Also contains patterns from: ${otherLevels.join(', ')}`;
+                }
+            } else {
+                rationale = `Default classification to ${classification} - no specific patterns detected`;
+            }
+            
+            return {
+                id: outcomeId,
+                text: outcomeText,
+                classification: classification,
+                confidence: Math.round(confidence * 1000) / 1000,
+                detectedPatterns: detectedPatterns,
+                rationale: rationale,
+                isEdgeCase: edgeCaseReasons.length > 0,
+                edgeCaseReasons: edgeCaseReasons,
+                allDetectedIndicators: Object.values(detectedPatterns).flat()
+            };
+        }
+
+        // UI Functions
+        document.querySelectorAll('input[name="inputType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'single') {
+                    document.getElementById('singleInput').classList.remove('hidden');
+                    document.getElementById('batchInput').classList.add('hidden');
+                } else {
+                    document.getElementById('singleInput').classList.add('hidden');
+                    document.getElementById('batchInput').classList.remove('hidden');
+                }
+            });
+        });
+
+        function analyzeSingle() {
+            const text = document.getElementById('outcomeText').value.trim();
+            if (!text) {
+                alert('Please enter a learning outcome to analyze.');
+                return;
+            }
+            
+            const result = analyzeOutcome(text, 'SINGLE');
+            displayResults([result], { totalOutcomes: 1, edgeCasesCount: result.isEdgeCase ? 1 : 0 });
+        }
+
+        function loadCSV() {
+            const file = document.getElementById('csvFile').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('csvData').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function analyzeBatch() {
+            const csvText = document.getElementById('csvData').value.trim();
+            if (!csvText) {
+                alert('Please enter CSV data or upload a file.');
+                return;
+            }
+            
+            const outcomes = parseCSV(csvText);
+            if (outcomes.length === 0) {
+                alert('No valid outcomes found in CSV data.');
+                return;
+            }
+            
+            const results = outcomes.map(outcome => analyzeOutcome(outcome.text, outcome.id));
+            const edgeCases = results.filter(r => r.isEdgeCase);
+            
+            const summary = {
+                totalOutcomes: results.length,
+                edgeCasesCount: edgeCases.length,
+                classificationDistribution: results.reduce((counts, result) => {
+                    counts[result.classification] = (counts[result.classification] || 0) + 1;
+                    return counts;
+                }, {})
+            };
+            
+            displayResults(results, summary);
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim());
+            const outcomes = [];
+            
+            lines.forEach((line, index) => {
+                const [id, ...textParts] = line.split(',');
+                const text = textParts.join(',').trim();
+                
+                if (id && text) {
+                    outcomes.push({ id: id.trim(), text: text });
+                }
+            });
+            
+            return outcomes;
+        }
+
+        function displayResults(results, summary) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = '<div class="summary">';
+            html += `<h3>Analysis Summary</h3>`;
+            html += `<p><strong>Total Outcomes:</strong> ${summary.totalOutcomes}</p>`;
+            html += `<p><strong>Edge Cases:</strong> ${summary.edgeCasesCount} (${Math.round(summary.edgeCasesCount/summary.totalOutcomes*100)}%)</p>`;
+            
+            if (summary.classificationDistribution) {
+                html += '<p><strong>Classifications:</strong></p><ul>';
+                Object.entries(summary.classificationDistribution).forEach(([level, count]) => {
+                    html += `<li>${level}: ${count}</li>`;
+                });
+                html += '</ul>';
+            }
+            html += '</div>';
+            
+            results.forEach(result => {
+                const edgeClass = result.isEdgeCase ? ' edge-case' : '';
+                html += `<div class="outcome-result ${result.classification}${edgeClass}">`;
+                html += `<div class="classification">${result.id}: ${result.classification}</div>`;
+                html += `<div class="confidence">Confidence: ${result.confidence}</div>`;
+                
+                if (result.isEdgeCase) {
+                    html += `<div class="edge-warning">⚠️ Edge Case: ${result.edgeCaseReasons.join('; ')}</div>`;
+                }
+                
+                html += `<div class="rationale">${result.rationale}</div>`;
+                html += `<div style="margin-top: 10px; font-size: 14px; color: #555;">"${result.text}"</div>`;
+                html += '</div>';
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        // Initialize with a real example from your edge cases
+        document.getElementById('outcomeText').value = "Exercise significant judgement in the development of an empathetic, ethical, considerations and responsible or sustainable creative practice";
+    </script>
+</body>
+</html>
